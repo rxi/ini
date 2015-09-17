@@ -38,10 +38,19 @@ static char* next(ini_t *ini, char *p) {
   return p;
 }
 
+/* Iterates line string backwards replacing each char with '\0' until a
+ * non-whitespace character is encountered */
+static void trim_back(ini_t *ini, char *p) {
+  while (p >= ini->data && (*p == ' ' || *p == '\t' || *p == '\r')) {
+    *p-- = '\0';
+  }
+}
+
 /* Splits data in place into strings containing section-headers, keys and
  * values using one or more '\0' as a delimiter */
 static void split_data(ini_t *ini) {
-  char *q, *p = ini->data;
+  char *line_start;
+  char *p = ini->data;
 
   while (p < ini->end) {
     switch (*p) {
@@ -61,26 +70,35 @@ static void split_data(ini_t *ini) {
         *p = '\0';
         break;
 
-      case '=':
-        do {
-          *p++ = '\0';
-        } while (*p == ' ' || *p == '\t');
-        p += strcspn(p, "\n");
-        goto trim_back;
-
       case ';':
-        while (*p && *p != '\n') {
+discard_line:
+        while (p < ini->end && *p != '\n') {
           *p++ = '\0';
         }
         break;
 
       default:
-        p += strcspn(p, "=");
-trim_back:
-        q = p - 1;
-        while (*q == ' ' || *q == '\t' || *q == '\r') {
-          *q-- = '\0';
+        line_start = p;
+        p += strcspn(p, "=\n");
+        if (*p == '\n') {
+          /* Bad line format: missing '=' */
+          p = line_start;
+          goto discard_line;
         }
+        trim_back(ini, p - 1);
+
+        /* Replace '=' and following whitespace with '\0' */
+        do {
+          *p++ = '\0';
+        } while (*p == ' ' || *p == '\r' || *p == '\t');
+
+        if (*p == '\n' || *p == '\0') {
+          /* Bad line format: no value after '=' */
+          p = line_start;
+          goto discard_line;
+        }
+        p += strcspn(p, "\n");
+        trim_back(ini, p - 1);
         break;
     }
   }
