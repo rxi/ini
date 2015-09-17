@@ -89,7 +89,7 @@ static void split_data(ini_t *ini) {
         }
         trim_back(ini, p - 1);
 
-        /* Replace '=' and following whitespace with '\0' */
+        /* Replace '=' and whitespace after it with '\0' */
         do {
           *p++ = '\0';
         } while (*p == ' ' || *p == '\r' || *p == '\t');
