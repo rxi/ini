@@ -38,12 +38,17 @@ static char* next(ini_t *ini, char *p) {
   return p;
 }
 
-/* Iterates line string backwards replacing each char with '\0' until a
- * non-whitespace character is encountered */
 static void trim_back(ini_t *ini, char *p) {
   while (p >= ini->data && (*p == ' ' || *p == '\t' || *p == '\r')) {
     *p-- = '\0';
   }
+}
+
+static char* discard_line(ini_t *ini, char *p) {
+  while (p < ini->end && *p != '\n') {
+    *p++ = '\0';
+  }
+  return p;
 }
 
 /* Splits data in place into strings containing section-headers, keys and
@@ -71,10 +76,7 @@ static void split_data(ini_t *ini) {
         break;
 
       case ';':
-discard_line:
-        while (p < ini->end && *p != '\n') {
-          *p++ = '\0';
-        }
+        p = discard_line(ini, p);
         break;
 
       default:
@@ -82,8 +84,8 @@ discard_line:
         p += strcspn(p, "=\n");
         if (*p == '\n') {
           /* Bad line format: missing '=' */
-          p = line_start;
-          goto discard_line;
+          p = discard_line(ini, line_start);
+          break;
         }
         trim_back(ini, p - 1);
 
@@ -94,8 +96,8 @@ discard_line:
 
         if (*p == '\n' || *p == '\0') {
           /* Bad line format: no value after '=' */
-          p = line_start;
-          goto discard_line;
+          p = discard_line(ini, line_start);
+          break;
         }
         p += strcspn(p, "\n");
         trim_back(ini, p - 1);
