@@ -179,8 +179,8 @@ ini_t* ini_load(const char *filename) {
   ini->data = malloc(sz + 1);
   ini->data[sz] = '\0';
   ini->end = ini->data  + sz;
-  n = fread(ini->data, sz, 1, fp);
-  if (n !=  1) {
+  n = fread(ini->data, 1, sz, fp);
+  if (n != sz) {
     goto fail;
   }
 
