@@ -66,7 +66,7 @@ static void split_data(ini_t *ini) {
         break;
 
       case '[':
-        p += strcspn(p, "]");
+        p += strcspn(p, "]\n");
         *p = '\0';
         break;
 
