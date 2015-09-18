@@ -120,7 +120,7 @@ static void unescape_quoted_strings(ini_t *ini) {
        * as escape sequences are always larger than their resultant data */
       char *q = p;
       p++;
-      while (*q) {
+      while (*p && *p != '"') {
         if (*p == '\\') {
           /* Handle escaped char */
           p++;
@@ -128,13 +128,9 @@ static void unescape_quoted_strings(ini_t *ini) {
             case 'r'  : *q = '\r';  break;
             case 'n'  : *q = '\n';  break;
             case 't'  : *q = '\t';  break;
+            case '\0' : goto end_string;
             default   : *q = *p;    break;
           }
-
-        } else if (*p == '"') {
-          /* Handle end of string */
-          *q = '\0';
-          break;
 
         } else {
           /* Handle normal char */
@@ -142,7 +138,9 @@ static void unescape_quoted_strings(ini_t *ini) {
         }
         q++, p++;
       }
-      /* Fill gap between read-head and write-head's position with '\0' */
+end_string:
+      /* Move the read-head to the start of the next string and fill the space
+       * between it and the write-head with '\0' */
       p = next(ini, p);
       memset(q, '\0', p - q);
     } else {
