@@ -82,7 +82,8 @@ static void split_data(ini_t *ini) {
       default:
         line_start = p;
         p += strcspn(p, "=\n");
-        if (*p == '\n') {
+
+        if (*p != '=') {
           /* Bad line format: missing '=' */
           p = discard_line(ini, line_start);
           break;
