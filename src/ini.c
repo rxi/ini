@@ -143,6 +143,7 @@ static void split_data(ini_t *ini) {
             break;
           }
 
+          /* Discard the rest of the line after the string value */
           p = discard_line(ini, p);
 
         } else {
