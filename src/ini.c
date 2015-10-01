@@ -51,10 +51,41 @@ static char* discard_line(ini_t *ini, char *p) {
   return p;
 }
 
+
+static char *unescape_quoted_value(ini_t *ini, char *p) {
+  /* Use `q` as write-head and `p` as read-head, `p` is always ahead of `q`
+   * as escape sequences are always larger than their resultant data */
+  char *q = p;
+  p++;
+  while (p < ini->end && *p != '"' && *p != '\r' && *p != '\n') {
+    if (*p == '\\') {
+      /* Handle escaped char */
+      p++;
+      switch (*p) {
+        default   : *q = *p;    break;
+        case 'r'  : *q = '\r';  break;
+        case 'n'  : *q = '\n';  break;
+        case 't'  : *q = '\t';  break;
+        case '\r' :
+        case '\n' :
+        case '\0' : goto end;
+      }
+
+    } else {
+      /* Handle normal char */
+      *q = *p;
+    }
+    q++, p++;
+  }
+end:
+  return q;
+}
+
+
 /* Splits data in place into strings containing section-headers, keys and
- * values using one or more '\0' as a delimiter */
+ * values using one or more '\0' as a delimiter. Unescapes quoted values */
 static void split_data(ini_t *ini) {
-  char *line_start;
+  char *value_start, *line_start;
   char *p = ini->data;
 
   while (p < ini->end) {
@@ -83,8 +114,8 @@ static void split_data(ini_t *ini) {
         line_start = p;
         p += strcspn(p, "=\n");
 
+        /* Is line missing a '='? */
         if (*p != '=') {
-          /* Bad line format: missing '=' */
           p = discard_line(ini, line_start);
           break;
         }
@@ -95,60 +126,35 @@ static void split_data(ini_t *ini) {
           *p++ = '\0';
         } while (*p == ' ' || *p == '\r' || *p == '\t');
 
+        /* Is a value after '=' missing? */
         if (*p == '\n' || *p == '\0') {
-          /* Bad line format: no value after '=' */
           p = discard_line(ini, line_start);
           break;
         }
-        p += strcspn(p, "\n");
-        trim_back(ini, p - 1);
+    
+        if (*p == '"') {
+          /* Handle quoted string value */
+          value_start = p;
+          p = unescape_quoted_value(ini, p);
+
+          /* Was the string empty? */
+          if (p == value_start) {
+            p = discard_line(ini, line_start);
+            break;
+          }
+
+          p = discard_line(ini, p);
+
+        } else {
+          /* Handle normal value */
+          p += strcspn(p, "\n");
+          trim_back(ini, p - 1);
+        }
         break;
     }
   }
 }
 
-/* Unescapes and unquotes all quoted strings in the split data */
-static void unescape_quoted_strings(ini_t *ini) {
-  char *p = ini->data;
-
-  if (*p == '\0') {
-    p = next(ini, p);
-  }
-
-  while (p < ini->end) {
-    if (*p == '"') {
-      /* Use `q` as write-head and `p` as read-head, `p` is always ahead of `q`
-       * as escape sequences are always larger than their resultant data */
-      char *q = p;
-      p++;
-      while (*p && *p != '"') {
-        if (*p == '\\') {
-          /* Handle escaped char */
-          p++;
-          switch (*p) {
-            case 'r'  : *q = '\r';  break;
-            case 'n'  : *q = '\n';  break;
-            case 't'  : *q = '\t';  break;
-            case '\0' : goto end_string;
-            default   : *q = *p;    break;
-          }
-
-        } else {
-          /* Handle normal char */
-          *q = *p;
-        }
-        q++, p++;
-      }
-end_string:
-      /* Move the read-head to the start of the next string and fill the space
-       * between it and the write-head with '\0' */
-      p = next(ini, p);
-      memset(q, '\0', p - q);
-    } else {
-      p = next(ini, p);
-    }
-  }
-}
 
 
 ini_t* ini_load(const char *filename) {
@@ -185,7 +191,6 @@ ini_t* ini_load(const char *filename) {
 
   /* Prepare data */
   split_data(ini);
-  unescape_quoted_strings(ini);
 
   /* Clean up and return */
   fclose(fp);
