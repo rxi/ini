@@ -8,7 +8,7 @@
 #ifndef INI_H
 #define INI_H
 
-#define INI_VERSION "0.1.0"
+#define INI_VERSION "0.1.1"
 
 typedef struct ini_t ini_t;
 
