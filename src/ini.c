@@ -1,4 +1,4 @@
-/** 
+/**
  * Copyright (c) 2016 rxi
  *
  * This library is free software; you can redistribute it and/or modify it
@@ -131,7 +131,7 @@ static void split_data(ini_t *ini) {
           p = discard_line(ini, line_start);
           break;
         }
-    
+
         if (*p == '"') {
           /* Handle quoted string value */
           value_start = p;
