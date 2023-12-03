@@ -198,6 +198,9 @@ ini_t* ini_load(const char *filename) {
 
   /* Load file content into memory, null terminate, init end var */
   ini->data = malloc(sz + 1);
+  if (!ini->data) {
+    goto fail;
+  }
   ini->data[sz] = '\0';
   ini->end = ini->data  + sz;
   n = fread(ini->data, 1, sz, fp);
@@ -220,7 +223,7 @@ fail:
 
 
 void ini_free(ini_t *ini) {
-  free(ini->data);
+  if (ini->data) free(ini->data);
   free(ini);
 }
 
